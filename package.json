@@ -1,0 +1,44 @@
+{
+  "name": "install-a-program",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Install a Program (Bulk Edition) — install multiple programs at once on Windows (Ninite-style bulk install) with Chocolatey, winget, updates, and classic uninstall",
+  "keywords": [
+    "install-a-program",
+    "install-multiple-programs",
+    "ninite-alternative",
+    "bulk-install-software",
+    "install-programs-windows",
+    "silent-install",
+    "software-bundle-installer",
+    "chocolatey-gui",
+    "winget-gui",
+    "windows-package-manager",
+    "package-manager-gui",
+    "scoop-gui",
+    "bulk-update",
+    "outdated-packages",
+    "uninstall-programs",
+    "windows-11",
+    "tauri"
+  ],
+  "author": {
+    "name": "Taylor Ivanoff"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/run-tauri.cjs dev",
+    "start": "node scripts/run-tauri.cjs dev",
+    "build": "node scripts/run-tauri.cjs build",
+    "tauri": "node scripts/run-tauri.cjs",
+    "release": "node scripts/run-tauri.cjs build",
+    "bump": "node scripts/bump-version.cjs",
+    "icon": "node scripts/run-tauri.cjs icon app-icon.png"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1"
+  }
+}
