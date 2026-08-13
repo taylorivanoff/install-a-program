@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [master, main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -40,18 +41,25 @@ jobs:
               src-tauri/build.rs|src-tauri/Cargo.toml|src-tauri/Cargo.lock|src-tauri/tauri.conf.json|app-icon.png)
                 return 0
                 ;;
+              scripts/*)
+                return 0
+                ;;
             esac
             return 1
           }
 
           SHOULD_RELEASE=false
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            if is_release_relevant "$file"; then
-              SHOULD_RELEASE=true
-              break
-            fi
-          done <<< "$CHANGED"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SHOULD_RELEASE=true
+          else
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              if is_release_relevant "$file"; then
+                SHOULD_RELEASE=true
+                break
+              fi
+            done <<< "$CHANGED"
+          fi
 
           if [ "$SHOULD_RELEASE" != true ]; then
             echo "Only docs/metadata changed; skipping version bump and release"
