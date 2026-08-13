@@ -1,8 +1,11 @@
-mod bootstrap;
-mod elevation;
+pub mod bootstrap;
+pub mod elevation;
 mod programs;
+
+pub use elevation::apply_dev_config_from_args;
 mod providers;
-mod runner;
+pub mod runner;
+pub mod standalone;
 mod uninstall;
 
 use std::collections::HashMap;
@@ -24,6 +27,14 @@ fn check_elevated() -> bool {
 }
 
 #[tauri::command]
+fn request_elevation(app: AppHandle) -> Result<(), String> {
+    elevation::request_elevation()?;
+    // Exit so the elevated relaunch is not treated as a second instance.
+    app.exit(0);
+    Ok(())
+}
+
+#[tauri::command]
 fn provider_status() -> bootstrap::ProviderStatus {
     bootstrap::provider_status()
 }
@@ -40,6 +51,52 @@ async fn ensure_providers(app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || bootstrap::ensure_providers(&app))
         .await
         .map_err(|e| format!("Provider bootstrap task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn ensure_winget(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || bootstrap::ensure_winget(&app))
+        .await
+        .map_err(|e| format!("winget bootstrap task failed: {e}"))?
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportStandaloneRequest {
+    dest_path: String,
+    name: Option<String>,
+    ids: Vec<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportStandaloneResult {
+    path: String,
+    app_count: usize,
+}
+
+#[tauri::command]
+fn export_standalone_installer(
+    request: ExportStandaloneRequest,
+) -> Result<ExportStandaloneResult, String> {
+    let bundle = standalone::StandaloneBundle::new(request.name, request.ids);
+    let path = std::path::PathBuf::from(&request.dest_path);
+    let app_count = standalone::export_standalone_installer(&path, &bundle)?;
+    Ok(ExportStandaloneResult {
+        path: request.dest_path,
+        app_count,
+    })
+}
+
+#[tauri::command]
+fn pick_standalone_save_path(default_name: Option<String>) -> Result<Option<String>, String> {
+    let mut dialog = rfd::FileDialog::new().set_title("Save standalone installer");
+    if let Some(name) = default_name.filter(|n| !n.trim().is_empty()) {
+        dialog = dialog.set_file_name(name);
+    } else {
+        dialog = dialog.set_file_name("Install-Programs-setup.exe");
+    }
+    Ok(dialog.save_file().map(|p| p.display().to_string()))
 }
 
 #[tauri::command]
@@ -196,9 +253,13 @@ pub fn run() {
             tauri_tray_base::settings_set,
             tauri_tray_base::app_get_state,
             check_elevated,
+            request_elevation,
             provider_status,
             bootstrap_chocolatey,
             ensure_providers,
+            ensure_winget,
+            export_standalone_installer,
+            pick_standalone_save_path,
             list_installed,
             search_packages,
             list_popular_packages,
@@ -218,6 +279,7 @@ pub fn run() {
             // Updates: winget wins when the same app is listed by multiple providers.
             defaults.insert("updateAuthority".into(), json!("winget"));
             defaults.insert("showUpdateDuplicates".into(), json!(false));
+            defaults.insert("simpleMode".into(), json!(true));
 
             install_state(
                 app.handle(),

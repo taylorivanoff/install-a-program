@@ -232,6 +232,48 @@ pub fn ensure_providers(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Install winget only when missing (Simple mode bootstrap).
+pub fn ensure_winget(app: &AppHandle) -> Result<(), String> {
+    emit_bootstrap(
+        app,
+        "system",
+        "running",
+        Some("Checking winget…".into()),
+        None,
+    );
+
+    if provider_status().winget.available {
+        emit_bootstrap(
+            app,
+            "system",
+            "done",
+            Some("winget is ready.".into()),
+            None,
+        );
+        let _ = app.emit("bootstrap-finished", ());
+        return Ok(());
+    }
+
+    emit_bootstrap(
+        app,
+        "system",
+        "running",
+        Some("Installing winget (App Installer)…".into()),
+        None,
+    );
+    let _ = install_winget_streaming(app);
+
+    let ready = provider_status().winget.available;
+    let message = if ready {
+        "winget is ready.".into()
+    } else {
+        "winget is still missing. Open App Installer from Settings.".into()
+    };
+    emit_bootstrap(app, "system", if ready { "done" } else { "failed" }, Some(message), None);
+    let _ = app.emit("bootstrap-finished", ());
+    Ok(())
+}
+
 /// Official Chocolatey bootstrap (does not redistribute Chocolatey binaries).
 pub fn install_chocolatey() -> Result<String, String> {
     if find_choco().is_some() {

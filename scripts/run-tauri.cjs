@@ -178,6 +178,12 @@ function applyDevHotReload(appRoot) {
       const merged = JSON.parse(process.env.TAURI_CONFIG);
       merged.build.devUrl = url;
       process.env.TAURI_CONFIG = JSON.stringify(merged);
+      const sidecarName = `${path.basename(appRoot)}-tauri-dev.json`;
+      fs.writeFileSync(
+        path.join(os.tmpdir(), sidecarName),
+        process.env.TAURI_CONFIG,
+        'utf8'
+      );
       return url;
     },
     async close() {

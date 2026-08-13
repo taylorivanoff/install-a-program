@@ -27,7 +27,7 @@ const opener = window.__TAURI__?.opener;
 /** @typedef {{ name: string, url: string, disabled: boolean, priority?: number }} ChocoSource */
 
 /** @type {"installed" | "browse" | "updates" | "programs" | "sources" | "settings"} */
-let view = "installed";
+let view = "browse";
 /** @type {Package[]} */
 let packages = [];
 /** @type {Program[]} */
@@ -50,6 +50,100 @@ let sortDir = "asc";
 let browseQuery = "";
 /** @type {any} */
 let providerStatusCache = null;
+let isElevated = false;
+let simpleMode = true;
+/** @type {string | null} */
+let lastBatchAction = null;
+/** @type {string[]} */
+let lastBatchIds = [];
+
+const CATEGORY_ORDER = [
+  "Browsers",
+  "Compression",
+  "Media",
+  "Imaging",
+  "Documents",
+  "Communication",
+  "Gaming",
+  "Development",
+  "Security",
+  "Cloud",
+  "Runtimes",
+  "Utilities",
+  "Other",
+];
+
+const PRESETS = {
+  freshPc: {
+    label: "Fresh PC",
+    apps: [
+      "Google Chrome",
+      "7-Zip",
+      "VLC media player",
+      "Discord",
+      "Visual Studio Code",
+      "Spotify",
+      "Adobe Acrobat Reader",
+      ".NET Desktop Runtime 8",
+    ],
+  },
+  developer: {
+    label: "Developer",
+    apps: [
+      "Git",
+      "Visual Studio Code",
+      "Node.js LTS",
+      "Python 3",
+      "Windows Terminal",
+      "PowerToys",
+      "Docker Desktop",
+      "GitHub CLI",
+    ],
+  },
+  gaming: {
+    label: "Gaming",
+    apps: [
+      "Steam",
+      "Epic Games Launcher",
+      "Discord",
+      "OBS Studio",
+      "Google Chrome",
+    ],
+  },
+  student: {
+    label: "Student",
+    apps: [
+      "LibreOffice",
+      "Zoom",
+      "Microsoft Teams",
+      "Google Chrome",
+      "Adobe Acrobat Reader",
+      "Microsoft OneNote",
+    ],
+  },
+};
+
+const EXCLUSION_GROUPS = [
+  {
+    apps: [
+      "Google Chrome",
+      "Mozilla Firefox",
+      "Microsoft Edge",
+      "Brave",
+      "Opera",
+      "Tor Browser",
+    ],
+  },
+  {
+    apps: ["7-Zip", "WinRAR", "PeaZip"],
+  },
+  {
+    apps: ["Adobe Acrobat Reader", "SumatraPDF", "Foxit PDF Reader"],
+  },
+];
+
+/** @type {Map<string, string>} */
+const nameToId = new Map();
 
 const els = {
   packageRows: document.getElementById("package-rows"),
@@ -68,7 +162,6 @@ const els = {
   installBtn: document.getElementById("install-btn"),
   upgradeBtn: document.getElementById("upgrade-btn"),
   upgradeAllBtn: document.getElementById("upgrade-all-btn"),
-  uninstallBtn: document.getElementById("uninstall-btn"),
   pinBtn: document.getElementById("pin-btn"),
   unpinBtn: document.getElementById("unpin-btn"),
   uninstallProgramsBtn: document.getElementById("uninstall-programs-btn"),
@@ -106,6 +199,16 @@ const els = {
   settingsScoopDesc: document.getElementById("settings-scoop-desc"),
   updateAuthority: document.getElementById("update-authority"),
   showUpdateDuplicates: document.getElementById("show-update-duplicates"),
+  advancedMode: document.getElementById("advanced-mode"),
+  statusSummary: document.getElementById("status-summary"),
+  browseGridPanel: document.getElementById("browse-grid-panel"),
+  browseGrid: document.getElementById("browse-grid"),
+  packagesTable: document.getElementById("packages-table"),
+  copyBundleBtn: document.getElementById("copy-bundle-btn"),
+  pasteBundleBtn: document.getElementById("paste-bundle-btn"),
+  exportStandaloneBtn: document.getElementById("export-standalone-btn"),
+  completeDialog: document.getElementById("complete-dialog"),
+  completeMessage: document.getElementById("complete-message"),
 };
 
 let bootstrappingProviders = false;
@@ -137,11 +240,226 @@ function cancelPendingLoads() {
 }
 
 function providerFilters() {
+  if (simpleMode) {
+    const wingetOk = providerStatusCache?.winget?.available;
+    if (wingetOk) {
+      return {
+        includeChocolatey: false,
+        includeWinget: true,
+        includeScoop: false,
+      };
+    }
+    return {
+      includeChocolatey: !!providerStatusCache?.chocolatey?.available,
+      includeWinget: false,
+      includeScoop: false,
+    };
+  }
   return {
     includeChocolatey: els.filterChoco.checked,
     includeWinget: els.filterWinget.checked,
     includeScoop: els.filterScoop.checked,
   };
+}
+
+/** Provider checkboxes for the Updates tab (all views in Advanced; Updates only in Simple). */
+function updateProviderFilters() {
+  return {
+    includeChocolatey: els.filterChoco.checked,
+    includeWinget: els.filterWinget.checked,
+    includeScoop: els.filterScoop.checked,
+  };
+}
+
+function syncProviderFilterAvailability() {
+  const s = providerStatusCache;
+  if (!s) return;
+  els.filterChoco.disabled = !s.chocolatey?.available;
+  els.filterWinget.disabled = !s.winget?.available;
+  els.filterScoop.disabled = !s.scoop?.available;
+}
+
+/** In Simple mode, default Updates filters to every installed package manager. */
+function syncUpdateProviderFilters() {
+  const s = providerStatusCache;
+  if (s) {
+    els.filterChoco.checked = !!s.chocolatey?.available;
+    els.filterWinget.checked = !!s.winget?.available;
+    els.filterScoop.checked = !!s.scoop?.available;
+  } else {
+    els.filterChoco.checked = true;
+    els.filterWinget.checked = true;
+    els.filterScoop.checked = true;
+  }
+  syncProviderFilterAvailability();
+}
+
+function resetBrowseProviderFilters() {
+  els.filterChoco.checked = false;
+  els.filterScoop.checked = false;
+  els.filterWinget.checked = true;
+  els.filterChoco.disabled = false;
+  els.filterWinget.disabled = false;
+  els.filterScoop.disabled = false;
+}
+
+function rebuildNameIndex() {
+  nameToId.clear();
+  for (const p of packages) nameToId.set(p.name, p.id);
+}
+
+function exclusionGroupForName(name) {
+  return EXCLUSION_GROUPS.find((group) => group.apps.includes(name)) ?? null;
+}
+
+function setPackageSelected(id, checked) {
+  const pkg = packages.find((p) => p.id === id);
+  if (!pkg) return;
+  if (checked) {
+    const group = exclusionGroupForName(pkg.name);
+    if (group) {
+      for (const otherName of group.apps) {
+        if (otherName === pkg.name) continue;
+        const otherId = nameToId.get(otherName);
+        if (otherId) selected.delete(otherId);
+      }
+    }
+    selected.add(id);
+  } else {
+    selected.delete(id);
+  }
+}
+
+function showBrowseGrid() {
+  return view === "browse" && !els.search.value.trim();
+}
+
+function categorySortKey(category) {
+  const idx = CATEGORY_ORDER.indexOf(category ?? "Other");
+  return idx === -1 ? CATEGORY_ORDER.length : idx;
+}
+
+function categoryColor(category) {
+  const palette = [
+    "#0078d4",
+    "#8764b8",
+    "#ca5010",
+    "#498205",
+    "#d83b01",
+    "#038387",
+    "#005a9e",
+    "#881798",
+    "#c239b3",
+    "#0063b1",
+    "#8e562e",
+    "#647c64",
+  ];
+  const key = category ?? "Other";
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) hash = (hash + key.charCodeAt(i) * (i + 1)) % palette.length;
+  return palette[hash];
+}
+
+function packageInitial(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function serializeBundle() {
+  return JSON.stringify({ v: 1, ids: [...selected] });
+}
+
+function parseBundleText(text) {
+  const data = JSON.parse(text);
+  if (data?.v !== 1 || !Array.isArray(data.ids)) {
+    throw new Error("Invalid bundle format");
+  }
+  return data.ids.filter((id) => typeof id === "string" && id.includes(":"));
+}
+
+function updateStatusSummary() {
+  if (!simpleMode || !els.statusSummary) return;
+  const s = providerStatusCache;
+  if (!s) {
+    els.statusSummary.textContent = "Checking…";
+    els.statusSummary.className = "auth-badge pending";
+    els.statusSummary.disabled = true;
+    els.statusSummary.removeAttribute("title");
+    return;
+  }
+  if (!s.winget.available) {
+    els.statusSummary.textContent = "winget missing";
+    els.statusSummary.className = "auth-badge pending";
+    els.statusSummary.disabled = true;
+    els.statusSummary.removeAttribute("title");
+    return;
+  }
+  if (!isElevated) {
+    els.statusSummary.textContent = "Not elevated — click to elevate";
+    els.statusSummary.className = "auth-badge pending clickable";
+    els.statusSummary.disabled = busy;
+    els.statusSummary.title = "Restart as administrator";
+    return;
+  }
+  els.statusSummary.textContent = "Ready to install";
+  els.statusSummary.className = "auth-badge ok";
+  els.statusSummary.disabled = true;
+  els.statusSummary.removeAttribute("title");
+}
+
+function updateSimpleModeChrome() {
+  document.body.classList.toggle("simple-mode", simpleMode);
+  els.statusSummary?.classList.toggle("hidden", !simpleMode);
+  els.elevationBadge.classList.toggle("hidden", simpleMode);
+  els.chocoBadge.classList.toggle("hidden", simpleMode);
+  els.wingetBadge.classList.toggle("hidden", simpleMode);
+  els.scoopBadge.classList.toggle("hidden", simpleMode);
+  if (simpleMode) {
+    if (view === "updates") {
+      syncUpdateProviderFilters();
+    } else {
+      resetBrowseProviderFilters();
+    }
+  } else {
+    syncProviderFilterAvailability();
+  }
+  updateStatusSummary();
+}
+
+async function loadSimpleModePrefs() {
+  try {
+    const all = await invoke("settings_get");
+    if (typeof all?.simpleMode === "boolean") {
+      simpleMode = all.simpleMode;
+    }
+    if (els.advancedMode) {
+      els.advancedMode.checked = !simpleMode;
+    }
+  } catch {
+    simpleMode = true;
+  }
+  updateSimpleModeChrome();
+}
+
+async function saveSimpleModePrefs() {
+  try {
+    await invoke("settings_set", { partial: { simpleMode } });
+  } catch (err) {
+    logLine(`Failed to save mode preference: ${err}`);
+  }
+}
+
+function applyPreset(presetKey) {
+  const preset = PRESETS[presetKey];
+  if (!preset) return;
+  selected.clear();
+  for (const name of preset.apps) {
+    const id = nameToId.get(name);
+    if (id) setPackageSelected(id, true);
+  }
+  render();
+  logLine(`Applied “${preset.label}” preset.`);
 }
 
 function formatSize(kb) {
@@ -174,10 +492,18 @@ function setToolBadge(el, status, label) {
 async function refreshProviderStatus() {
   try {
     providerStatusCache = await invoke("provider_status");
-    setToolBadge(els.chocoBadge, providerStatusCache.chocolatey, "Chocolatey");
-    setToolBadge(els.wingetBadge, providerStatusCache.winget, "winget");
-    setToolBadge(els.scoopBadge, providerStatusCache.scoop, "Scoop");
+    if (!simpleMode) {
+      setToolBadge(els.chocoBadge, providerStatusCache.chocolatey, "Chocolatey");
+      setToolBadge(els.wingetBadge, providerStatusCache.winget, "winget");
+      setToolBadge(els.scoopBadge, providerStatusCache.scoop, "Scoop");
+    }
+    updateStatusSummary();
     updateSettingsPanel();
+    if (simpleMode && view === "updates") {
+      syncUpdateProviderFilters();
+    } else if (!simpleMode) {
+      syncProviderFilterAvailability();
+    }
   } catch (err) {
     logLine(`Failed to check providers: ${err}`);
   }
@@ -231,6 +557,25 @@ async function saveUpdatePrefs() {
     await invoke("settings_set", { partial });
   } catch (err) {
     logLine(`Failed to save update preferences: ${err}`);
+  }
+}
+
+async function ensureWingetInBackground() {
+  if (bootstrappingProviders) return;
+  bootstrappingProviders = true;
+  updateSettingsPanel();
+  try {
+    await invoke("ensure_winget");
+  } catch (err) {
+    logLine(`winget bootstrap error: ${err}`);
+  } finally {
+    bootstrappingProviders = false;
+    await refreshProviderStatus();
+    if (isPackageView()) {
+      await loadPackages();
+    } else {
+      render();
+    }
   }
 }
 
@@ -359,10 +704,23 @@ function updateViewChrome() {
   els.sourcesPanel.classList.toggle("hidden", !sourcesMode);
   els.settingsPanel.classList.toggle("hidden", !settingsMode);
 
+  const showProviderFilters = packageMode && (!simpleMode || view === "updates");
   document.querySelectorAll(".provider-filter").forEach((el) => {
-    el.classList.toggle("hidden", !packageMode);
+    el.classList.toggle("hidden", !showProviderFilters);
   });
+  if (showProviderFilters) {
+    syncProviderFilterAvailability();
+  }
   document.querySelector(".programs-only")?.classList.toggle("hidden", !programsMode);
+
+  const gridMode = packageMode && showBrowseGrid();
+  els.packagesPanel?.classList.toggle("grid-mode", gridMode);
+  els.browseGridPanel?.classList.toggle("hidden", !gridMode);
+  els.packagesTable?.classList.toggle("hidden-table", gridMode);
+  els.copyBundleBtn?.classList.toggle("hidden", !gridMode);
+  els.pasteBundleBtn?.classList.toggle("hidden", !gridMode);
+  els.exportStandaloneBtn?.classList.toggle("hidden", !gridMode);
+  document.querySelector(".preset-bar")?.classList.toggle("hidden", !gridMode);
 
   els.search.classList.toggle("hidden", sourcesMode || settingsMode);
   els.selectVisibleBtn.classList.toggle("hidden", sourcesMode || settingsMode);
@@ -380,7 +738,6 @@ function updateViewChrome() {
   els.installBtn.classList.toggle("hidden", view !== "browse");
   els.upgradeBtn.classList.toggle("hidden", !(view === "installed" || view === "updates"));
   els.upgradeAllBtn.classList.toggle("hidden", view !== "updates");
-  els.uninstallBtn.classList.toggle("hidden", view !== "installed");
   els.pinBtn.classList.toggle("hidden", view !== "installed");
   els.unpinBtn.classList.toggle("hidden", view !== "installed");
   els.uninstallProgramsBtn.classList.toggle("hidden", !programsMode);
@@ -389,7 +746,6 @@ function updateViewChrome() {
     els.installBtn.disabled = true;
     els.upgradeBtn.disabled = true;
     els.upgradeAllBtn.disabled = true;
-    els.uninstallBtn.disabled = true;
     els.pinBtn.disabled = true;
     els.unpinBtn.disabled = true;
     els.uninstallProgramsBtn.disabled = true;
@@ -421,10 +777,18 @@ function updateSelectionUi() {
   els.selectedDetail.textContent = list.length ? "packages" : "—";
 
   els.installBtn.disabled = busy || view !== "browse" || list.length === 0;
+  if (els.exportStandaloneBtn) {
+    els.exportStandaloneBtn.disabled = busy || view !== "browse" || list.length === 0;
+  }
+  if (els.copyBundleBtn) {
+    els.copyBundleBtn.disabled = busy || view !== "browse" || list.length === 0;
+  }
+  if (els.pasteBundleBtn) {
+    els.pasteBundleBtn.disabled = busy || view !== "browse";
+  }
   els.upgradeBtn.disabled =
     busy || !(view === "installed" || view === "updates") || list.length === 0;
   els.upgradeAllBtn.disabled = busy || view !== "updates" || packages.length === 0;
-  els.uninstallBtn.disabled = busy || view !== "installed" || list.length === 0;
   els.pinBtn.disabled = busy || view !== "installed" || list.length === 0;
   els.unpinBtn.disabled = busy || view !== "installed" || list.length === 0;
 
@@ -434,11 +798,67 @@ function updateSelectionUi() {
   els.selectAll.indeterminate = !allSelected && visible.some((p) => selected.has(p.id));
 }
 
+function renderBrowseGrid() {
+  if (!els.browseGrid) return;
+  const grouped = new Map();
+  for (const p of packages) {
+    const cat = p.category ?? "Other";
+    if (!grouped.has(cat)) grouped.set(cat, []);
+    grouped.get(cat).push(p);
+  }
+  const categories = [...grouped.keys()].sort(
+    (a, b) => categorySortKey(a) - categorySortKey(b) || compareText(a, b)
+  );
+
+  els.browseGrid.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (const cat of categories) {
+    const section = document.createElement("section");
+    section.className = "browse-section";
+    const title = document.createElement("h3");
+    title.className = "browse-section-title";
+    title.textContent = cat;
+    section.appendChild(title);
+
+    const cards = document.createElement("div");
+    cards.className = "browse-cards";
+    const list = grouped.get(cat) ?? [];
+    list.sort((a, b) => compareText(a.name, b.name));
+    for (const p of list) {
+      const card = document.createElement("label");
+      card.className = "browse-card";
+      if (selected.has(p.id)) card.classList.add("selected");
+      if (busy) card.classList.add("disabled");
+      const color = categoryColor(cat);
+      card.innerHTML = `
+        <input type="checkbox" data-id="${escapeAttr(p.id)}" ${
+          selected.has(p.id) ? "checked" : ""
+        } ${busy ? "disabled" : ""} />
+        <span class="browse-card-avatar" style="background:${color}">${escapeHtml(
+          packageInitial(p.name)
+        )}</span>
+        <span class="browse-card-name">${escapeHtml(p.name)}</span>
+      `;
+      cards.appendChild(card);
+    }
+    section.appendChild(cards);
+    frag.appendChild(section);
+  }
+  els.browseGrid.appendChild(frag);
+}
+
 function renderPackages() {
   const visible = visiblePackages();
   els.countLabel.textContent = `${packages.length} package${packages.length === 1 ? "" : "s"}`;
   els.loadingState.classList.add("hidden");
-  els.emptyState.classList.toggle("hidden", visible.length > 0);
+  els.emptyState.classList.toggle("hidden", visible.length > 0 || showBrowseGrid());
+
+  if (showBrowseGrid()) {
+    renderBrowseGrid();
+    updateSortHeaders();
+    updateSelectionUi();
+    return;
+  }
 
   els.packageRows.innerHTML = "";
   const frag = document.createDocumentFragment();
@@ -570,7 +990,7 @@ async function loadPackages() {
   const forView = view;
   els.loadingState.classList.remove("hidden");
   els.emptyState.classList.add("hidden");
-  const filters = providerFilters();
+  const filters = forView === "updates" ? updateProviderFilters() : providerFilters();
   try {
     if (forView === "browse") {
       const q = els.search.value.trim();
@@ -578,6 +998,7 @@ async function loadPackages() {
       if (!q) {
         packages = await invoke("list_popular_packages", filters);
         if (isStaleLoad(seq, forView)) return;
+        rebuildNameIndex();
         render();
         logLine(
           `Showing ${packages.length} popular package(s). Type to search the catalogs.`
@@ -609,6 +1030,7 @@ async function loadPackages() {
     for (const id of [...selected]) {
       if (!packages.some((p) => p.id === id)) selected.delete(id);
     }
+    rebuildNameIndex();
     render();
   } catch (err) {
     if (isStaleLoad(seq, forView)) return;
@@ -659,17 +1081,25 @@ async function loadSources() {
 
 async function refreshElevation() {
   try {
-    const elevated = await invoke("check_elevated");
-    if (elevated) {
+    isElevated = await invoke("check_elevated");
+    if (isElevated) {
       els.elevationBadge.textContent = "Administrator";
       els.elevationBadge.className = "auth-badge ok";
+      els.elevationBadge.disabled = true;
+      els.elevationBadge.removeAttribute("title");
     } else {
-      els.elevationBadge.textContent = "Not elevated";
-      els.elevationBadge.className = "auth-badge pending";
+      els.elevationBadge.textContent = "Not elevated — click to elevate";
+      els.elevationBadge.className = "auth-badge pending clickable";
+      els.elevationBadge.disabled = false;
+      els.elevationBadge.title = "Restart as administrator";
     }
+    updateStatusSummary();
   } catch {
+    isElevated = false;
     els.elevationBadge.textContent = "Elevation unknown";
     els.elevationBadge.className = "auth-badge error";
+    els.elevationBadge.disabled = true;
+    els.elevationBadge.removeAttribute("title");
   }
 }
 
@@ -691,11 +1121,31 @@ async function confirmAction(title, message, names, okLabel, danger = true) {
   });
 }
 
+async function showCompleteDialog() {
+  if (!lastBatchAction || lastBatchIds.length === 0) return;
+  const done = lastBatchIds.filter((id) => statusById.get(id)?.status === "done").length;
+  const failed = lastBatchIds.filter((id) => statusById.get(id)?.status === "failed").length;
+  if (lastBatchAction !== "install" || done === 0) return;
+
+  els.completeMessage.textContent = `${done} installed${failed ? `, ${failed} failed` : ""}.`;
+  const result = await new Promise((resolve) => {
+    const onClose = () => {
+      els.completeDialog.removeEventListener("close", onClose);
+      resolve(els.completeDialog.returnValue);
+    };
+    els.completeDialog.addEventListener("close", onClose);
+    els.completeDialog.returnValue = "continue";
+    els.completeDialog.showModal();
+  });
+  lastBatchAction = null;
+  lastBatchIds = [];
+  if (result === "updates") setView("updates");
+}
+
 async function runPackageAction(action, ids, names) {
   if (!ids.length || busy) return;
   const labels = {
     install: ["Install packages", "Install these packages?", "Install", false],
-    uninstall: ["Uninstall packages", "Uninstall these packages?", "Uninstall", true],
     upgrade: ["Update packages", "Update these packages?", "Update", false],
     pin: ["Pin packages", "Pin these packages?", "Pin", false],
     unpin: ["Unpin packages", "Unpin these packages?", "Unpin", false],
@@ -705,7 +1155,10 @@ async function runPackageAction(action, ids, names) {
   if (result !== "ok") return;
 
   busy = true;
+  lastBatchAction = action;
+  lastBatchIds = [...ids];
   for (const id of ids) statusById.set(id, { status: "queued" });
+  updateStatusSummary();
   render();
   logLine(`Starting ${action} for ${ids.length} package(s)…`);
   try {
@@ -714,7 +1167,9 @@ async function runPackageAction(action, ids, names) {
     logLine(`Package action error: ${err}`);
   } finally {
     busy = false;
+    updateStatusSummary();
     await loadCurrentView();
+    if (action === "install") await showCompleteDialog();
   }
 }
 
@@ -731,6 +1186,7 @@ async function startProgramUninstall() {
   if (result !== "ok") return;
 
   busy = true;
+  updateStatusSummary();
   for (const p of targets) statusById.set(p.id, { status: "queued" });
   render();
   logLine(`Starting uninstall of ${targets.length} program(s)…`);
@@ -740,6 +1196,7 @@ async function startProgramUninstall() {
     logLine(`Uninstall batch error: ${err}`);
   } finally {
     busy = false;
+    updateStatusSummary();
     await loadPrograms();
   }
 }
@@ -747,8 +1204,16 @@ async function startProgramUninstall() {
 function setView(next) {
   if (view === next) return;
   cancelPendingLoads();
+  const prev = view;
   view = next;
-  selected.clear();
+  if (simpleMode && next === "updates") {
+    syncUpdateProviderFilters();
+  } else if (simpleMode && prev === "updates") {
+    resetBrowseProviderFilters();
+  }
+  if (!(isPackageView(prev) && isPackageView(next))) {
+    selected.clear();
+  }
   sortKey = "name";
   sortDir = "asc";
   render();
@@ -760,8 +1225,16 @@ els.packageRows.addEventListener("change", (e) => {
   if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") return;
   const id = input.dataset.id;
   if (!id) return;
-  if (input.checked) selected.add(id);
-  else selected.delete(id);
+  setPackageSelected(id, input.checked);
+  render();
+});
+
+els.browseGrid?.addEventListener("change", (e) => {
+  const input = e.target;
+  if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") return;
+  const id = input.dataset.id;
+  if (!id) return;
+  setPackageSelected(id, input.checked);
   render();
 });
 
@@ -856,14 +1329,14 @@ els.selectVisibleBtn.addEventListener("click", () => {
   if (view === "programs") {
     for (const p of visiblePrograms()) if (!p.protected) selectedPrograms.add(p.id);
   } else if (isPackageView()) {
-    for (const p of visiblePackages()) selected.add(p.id);
+    for (const p of visiblePackages()) setPackageSelected(p.id, true);
   }
   render();
 });
 els.selectAll.addEventListener("change", () => {
   const visible = visiblePackages();
-  if (els.selectAll.checked) for (const p of visible) selected.add(p.id);
-  else for (const p of visible) selected.delete(p.id);
+  if (els.selectAll.checked) for (const p of visible) setPackageSelected(p.id, true);
+  else for (const p of visible) setPackageSelected(p.id, false);
   render();
 });
 els.selectAllPrograms.addEventListener("change", () => {
@@ -894,14 +1367,6 @@ els.upgradeAllBtn.addEventListener("click", () => {
     "upgrade",
     packages.map((p) => p.id),
     packages.map((p) => p.name)
-  );
-});
-els.uninstallBtn.addEventListener("click", () => {
-  const list = packages.filter((p) => selected.has(p.id));
-  runPackageAction(
-    "uninstall",
-    list.map((p) => p.id),
-    list.map((p) => p.name)
   );
 });
 els.pinBtn.addEventListener("click", () => {
@@ -984,8 +1449,105 @@ els.showUpdateDuplicates?.addEventListener("change", async () => {
   }
 });
 
+document.querySelectorAll(".preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (busy) return;
+    applyPreset(btn.dataset.preset);
+  });
+});
+
+els.copyBundleBtn?.addEventListener("click", async () => {
+  if (selected.size === 0) return;
+  try {
+    await navigator.clipboard.writeText(serializeBundle());
+    logLine(`Copied ${selected.size} package(s) to clipboard.`);
+  } catch (err) {
+    logLine(`Copy failed: ${err}`);
+  }
+});
+
+els.pasteBundleBtn?.addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    const ids = parseBundleText(text);
+    selected.clear();
+    let matched = 0;
+    for (const id of ids) {
+      if (packages.some((p) => p.id === id)) {
+        setPackageSelected(id, true);
+        matched += 1;
+      }
+    }
+    render();
+    logLine(`Pasted bundle: ${matched} of ${ids.length} package(s) selected.`);
+  } catch (err) {
+    logLine(`Paste failed: ${err}`);
+  }
+});
+
+els.exportStandaloneBtn?.addEventListener("click", async () => {
+  const ids = packages.filter((p) => selected.has(p.id)).map((p) => p.id);
+  if (!ids.length || busy) return;
+  const nonWinget = ids.filter((id) => !id.startsWith("winget:"));
+  if (nonWinget.length) {
+    logLine("Standalone installer supports winget packages only.");
+    return;
+  }
+  try {
+    const destPath = await invoke("pick_standalone_save_path", {
+      defaultName: "Install-Programs-setup.exe",
+    });
+    if (!destPath) return;
+    const result = await invoke("export_standalone_installer", {
+      request: { destPath, name: "Custom bundle", ids },
+    });
+    logLine(`Saved standalone installer (${result.appCount} apps) to ${result.path}`);
+  } catch (err) {
+    logLine(`Export failed: ${err}`);
+  }
+});
+
+els.advancedMode?.addEventListener("change", async () => {
+  simpleMode = !els.advancedMode.checked;
+  await saveSimpleModePrefs();
+  updateSimpleModeChrome();
+  if (simpleMode && (view === "programs" || view === "sources")) {
+    setView("browse");
+  }
+  await refreshProviderStatus();
+  cancelPendingLoads();
+  void loadCurrentView();
+  if (!simpleMode) {
+    const s = providerStatusCache;
+    if (s && (!s.chocolatey.available || !s.winget.available || !s.scoop.available)) {
+      void ensureProvidersInBackground();
+    }
+  } else if (providerStatusCache && !providerStatusCache.winget.available) {
+    void ensureWingetInBackground();
+  }
+});
+
+async function requestElevation() {
+  if (isElevated || busy) return;
+  try {
+    logLine("Requesting administrator elevation…");
+    await invoke("request_elevation");
+  } catch (err) {
+    logLine(`Elevation failed: ${err}`);
+    await refreshElevation();
+  }
+}
+
 els.clearLogBtn.addEventListener("click", () => {
   els.log.textContent = "";
+});
+
+els.elevationBadge.addEventListener("click", () => {
+  void requestElevation();
+});
+
+els.statusSummary?.addEventListener("click", () => {
+  if (simpleMode) void requestElevation();
 });
 
 await listen("bootstrap-progress", (event) => {
@@ -1060,14 +1622,16 @@ await listen("tray:action", (event) => {
 
 await refreshElevation();
 await refreshProviderStatus();
+await loadSimpleModePrefs();
 await loadUpdatePrefs();
 await loadCurrentView();
 {
   const s = providerStatusCache;
-  if (
-    s &&
-    (!s.chocolatey.available || !s.winget.available || !s.scoop.available)
-  ) {
+  if (!s) {
+    /* no bootstrap */
+  } else if (simpleMode) {
+    if (!s.winget.available) void ensureWingetInBackground();
+  } else if (!s.chocolatey.available || !s.winget.available || !s.scoop.available) {
     void ensureProvidersInBackground();
   }
 }

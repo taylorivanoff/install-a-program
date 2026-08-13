@@ -30,6 +30,8 @@
     "dev": "node scripts/run-tauri.cjs dev",
     "start": "node scripts/run-tauri.cjs dev",
     "build": "node scripts/run-tauri.cjs build",
+    "build:portable": "node scripts/run-tauri.cjs build --no-bundle",
+    "build:runner": "cargo build --release --manifest-path src-tauri/Cargo.toml --bin install-a-program-runner",
     "tauri": "node scripts/run-tauri.cjs",
     "release": "node scripts/run-tauri.cjs build",
     "bump": "node scripts/bump-version.cjs",

@@ -1,16 +1,22 @@
 # Install a Program (Bulk Edition)
 
-Install multiple programs at once on Windows — a **Ninite-style bulk installer** and **Chocolatey GUI / winget GUI** alternative.
+Pick apps from a Ninite-style Browse grid and install them in one run on Windows. The app opens on **Browse** with category cards, one-click presets, and silent winget installs — then keeps your PC updated from the **Updates** tab (winget, Chocolatey, and Scoop).
 
-Search, multi-select, and install packages from **Chocolatey**, **winget**, and **Scoop**. Bulk-update outdated apps, manage Chocolatey sources, bootstrap Chocolatey when it is missing, and uninstall classic Win32/MSI programs from the registry (same workflow as [Uninstall a Program (Bulk Edition)](../bulk-uninstaller)).
+Advanced mode unlocks Chocolatey, Scoop, classic Programs uninstall, and Chocolatey source management.
+
+<!-- Screenshot: capture the Browse grid at 1100×760 and save as docs/images/browse-grid.png -->
 
 ## Features
 
-- **Bulk install** — Ninite-alternative flow: search, select many, install in one run
-- **Chocolatey + winget + Scoop** in one list UI
-- **Updates** view with update-all
-- **Programs** view for classic registry uninstall
-- **Chocolatey bootstrap** via the official install script (binaries are not redistributed)
+- **Browse grid** — category cards for popular apps (Ninite-style picker)
+- **Presets** — Fresh PC, Developer, Gaming, Student one-click bundles
+- **Simple mode** (default) — winget-first, minimal UI; Advanced mode unlocks all tabs and providers
+- **Conflict rules** — one browser, PDF reader, or archiver at a time
+- **Copy / paste bundle** — share a JSON selection via clipboard
+- **Standalone installer** — export a single `.exe` that silently installs your selection via winget (no GUI required on the target PC)
+- **Portable build** — run the full app without the NSIS installer
+- **Setup complete** — post-install summary with shortcut to Updates
+- **Bulk update** — update-all from the Updates view; filter by Chocolatey, winget, or Scoop (even in Simple mode)
 - Live activity log streaming CLI output
 - Tray, autostart, and close-to-tray via `tauri-tray-base`
 
@@ -28,15 +34,41 @@ npm install
 npm run dev
 ```
 
+Build the standalone runner template before exporting installers locally:
+
+```bash
+npm run build:runner
+mkdir -p src-tauri/resources
+cp src-tauri/target/release/install-a-program-runner.exe src-tauri/resources/runner-template.exe
+```
+
 ## Build
+
+NSIS installer:
 
 ```bash
 npm run build
 ```
 
-Installer output:
+Portable app (no installer):
 
-`src-tauri/target/release/bundle/nsis/Install a Program (Bulk Edition)_0.1.0_x64-setup.exe`
+```bash
+npm run build:portable
+```
+
+Output: `src-tauri/target/release/Install a Program (Bulk Edition).exe`
+
+NSIS installer output:
+
+`src-tauri/target/release/bundle/nsis/Install a Program (Bulk Edition)_0.1.2_x64-setup.exe`
+
+### Standalone bundle runner
+
+1. Select apps in Browse
+2. Click **Save standalone installer…**
+3. Run the exported `.exe` on another PC that has **winget** (App Installer)
+
+The runner installs only winget packages. Chocolatey/Scoop packages are not supported in standalone exports.
 
 ## SEO / discovery keywords
 

@@ -4,10 +4,15 @@ version = "0.1.2"
 description = "Install a Program (Bulk Edition) — install multiple programs at once on Windows"
 authors = ["Taylor Ivanoff"]
 edition = "2021"
+default-run = "install-a-program"
 
 [lib]
 name = "install_a_program_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "install-a-program-runner"
+path = "src/bin/runner-standalone.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -20,5 +25,12 @@ tauri-plugin-single-instance = "2"
 tauri-tray-base = { path = "../../tauri-tray-base" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+rfd = "0.15"
 winreg = "0.55"
-windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Threading"] }
+windows-sys = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_Threading",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }

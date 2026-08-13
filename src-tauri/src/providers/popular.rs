@@ -487,6 +487,30 @@ const POPULAR: &[PopularApp] = &[
         chocolatey_id: Some("rufus"),
         scoop_id: Some("rufus"),
     },
+    PopularApp {
+        name: "Foxit PDF Reader",
+        winget_id: Some("Foxit.FoxitReader"),
+        chocolatey_id: Some("foxitreader"),
+        scoop_id: None,
+    },
+    PopularApp {
+        name: "IrfanView",
+        winget_id: Some("IrfanSkiljan.IrfanView"),
+        chocolatey_id: Some("irfanview"),
+        scoop_id: Some("irfanview"),
+    },
+    PopularApp {
+        name: "Google Earth Pro",
+        winget_id: Some("Google.EarthPro"),
+        chocolatey_id: Some("googleearthpro"),
+        scoop_id: None,
+    },
+    PopularApp {
+        name: "CCleaner",
+        winget_id: Some("Piriform.CCleaner"),
+        chocolatey_id: Some("ccleaner"),
+        scoop_id: None,
+    },
 ];
 
 /// Packages shown when Browse is opened with an empty search.

@@ -77,9 +77,19 @@ pub fn infer_category(pkg: &Package) -> &'static str {
             "irfanview",
             "xnview",
             "blender",
+            "foxit",
         ],
     ) {
         return "Imaging";
+    }
+    if matches_any(
+        &compact,
+        &[
+            "googleearth",
+            "earthpro",
+        ],
+    ) {
+        return "Utilities";
     }
     if matches_any(
         &compact,
@@ -232,6 +242,7 @@ pub fn infer_category(pkg: &Package) -> &'static str {
             "revo",
             "speccy",
             "hwinfo",
+            "foxitreader",
         ],
     ) {
         return "Utilities";
