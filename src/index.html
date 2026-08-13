@@ -1,300 +1,287 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Install a Program (Bulk Edition) — install multiple programs at once on Windows. Ninite-style bulk install with Chocolatey GUI and winget GUI features, updates, and classic uninstall."
-    />
-    <meta
-      name="keywords"
-      content="install a program, install multiple programs, ninite alternative, bulk install software, chocolatey gui, winget gui, windows package manager, scoop gui, silent install, bulk update"
-    />
-    <meta name="color-scheme" content="light dark" />
-    <title>Install a Program (Bulk Edition)</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script type="module" src="./main.js" defer></script>
-  </head>
-  <body>
-    <div class="app">
-      <header class="top">
-        <div class="brand">
-          <h1 class="app-title">Install a Program (Bulk Edition)</h1>
-          <p class="subtitle">
-            Like a Ninite-style bulk installer, plus updates and uninstall — powered by Chocolatey &amp; winget.
-          </p>
-        </div>
-        <div class="meta">
-          <span id="elevation-badge" class="auth-badge pending">Checking elevation…</span>
-          <span id="choco-badge" class="auth-badge pending">Chocolatey…</span>
-          <span id="winget-badge" class="auth-badge pending">winget…</span>
-          <span id="scoop-badge" class="auth-badge pending">Scoop…</span>
-          <span id="count-label" class="count">0 items</span>
-        </div>
-      </header>
 
-      <div class="toolbar">
-        <div class="view-switch" role="tablist" aria-label="Views">
-          <button type="button" class="text-btn view-btn active" data-view="installed">Installed</button>
-          <button type="button" class="text-btn view-btn" data-view="browse">Browse</button>
-          <button type="button" class="text-btn view-btn" data-view="updates">Updates</button>
-          <button type="button" class="text-btn view-btn" data-view="programs">Programs</button>
-          <button type="button" class="text-btn view-btn" data-view="sources">Sources</button>
-          <button type="button" class="text-btn view-btn" data-view="settings">Settings</button>
-        </div>
-        <input
-          id="search"
-          type="search"
-          placeholder="Search…"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <label class="check-label provider-filter" data-for="packages">
-          <input id="filter-choco" type="checkbox" checked />
-          Chocolatey
-        </label>
-        <label class="check-label provider-filter" data-for="packages">
-          <input id="filter-winget" type="checkbox" checked />
-          winget
-        </label>
-        <label class="check-label provider-filter" data-for="packages">
-          <input id="filter-scoop" type="checkbox" checked />
-          Scoop
-        </label>
-        <label class="check-label programs-only hidden">
-          <input id="show-system" type="checkbox" />
-          Show system components
-        </label>
-        <button id="refresh-btn" type="button" class="text-btn">Refresh</button>
-        <button id="select-visible-btn" type="button" class="text-btn">Select visible</button>
-        <button id="clear-btn" type="button" class="text-btn">Clear</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Install a Program (Bulk Edition) — install multiple programs at once on Windows. Ninite-style bulk install with Chocolatey GUI and winget GUI features, updates, and classic uninstall." />
+  <meta name="keywords"
+    content="install a program, install multiple programs, ninite alternative, bulk install software, chocolatey gui, winget gui, windows package manager, scoop gui, silent install, bulk update" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Install a Program (Bulk Edition)</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script type="module" src="./main.js" defer></script>
+</head>
+
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="meta">
+        <span id="elevation-badge" class="auth-badge pending">Checking elevation…</span>
+        <span id="choco-badge" class="auth-badge pending">Chocolatey…</span>
+        <span id="winget-badge" class="auth-badge pending">winget…</span>
+        <span id="scoop-badge" class="auth-badge pending">Scoop…</span>
+        <span id="count-label" class="count">0 items</span>
       </div>
+    </header>
 
-      <section class="table-section">
-        <div class="table-wrap" id="packages-panel">
-          <table class="program-table">
-            <thead>
-              <tr>
-                <th class="col-check">
-                  <input id="select-all" type="checkbox" title="Select all visible" />
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="name" aria-pressed="true">
-                    Name <span class="sort-ind" aria-hidden="true">▲</span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="category">
-                    Category <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="provider">
-                    Provider <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="version">
-                    Version <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="available">
-                    Available <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="source">
-                    Source <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="status">
-                    Status <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="package-rows"></tbody>
-          </table>
-          <div id="empty-state" class="empty hidden">No packages match.</div>
-          <div id="loading-state" class="empty hidden">Loading…</div>
-        </div>
-
-        <div class="table-wrap hidden" id="programs-panel">
-          <table class="program-table">
-            <thead>
-              <tr>
-                <th class="col-check">
-                  <input id="select-all-programs" type="checkbox" title="Select all visible" />
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="name" data-scope="programs" aria-pressed="true">
-                    Name <span class="sort-ind" aria-hidden="true">▲</span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="publisher" data-scope="programs">
-                    Publisher <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="version" data-scope="programs">
-                    Version <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="size" data-scope="programs">
-                    Size <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-                <th>
-                  <button type="button" class="sort-btn" data-sort="status" data-scope="programs">
-                    Status <span class="sort-ind" aria-hidden="true"></span>
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody id="program-rows"></tbody>
-          </table>
-          <div id="programs-empty" class="empty hidden">No programs match your search.</div>
-          <div id="programs-loading" class="empty hidden">Loading installed programs…</div>
-        </div>
-
-        <div class="table-wrap hidden" id="sources-panel">
-          <table class="program-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>URL</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="source-rows"></tbody>
-          </table>
-          <div id="sources-empty" class="empty hidden">No Chocolatey sources (is Chocolatey installed?).</div>
-          <div class="sources-add">
-            <input id="source-name" type="text" placeholder="Source name" autocomplete="off" />
-            <input id="source-url" type="text" placeholder="Source URL" autocomplete="off" />
-            <button id="add-source-btn" type="button" class="text-btn primary">Add source</button>
-          </div>
-        </div>
-
-        <div class="settings-panel hidden" id="settings-panel">
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">Chocolatey</div>
-              <div class="settings-desc" id="settings-choco-desc">Checking…</div>
-            </div>
-            <button id="bootstrap-choco-btn" type="button" class="text-btn primary" disabled>
-              Install Chocolatey
-            </button>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">winget</div>
-              <div class="settings-desc" id="settings-winget-desc">Checking…</div>
-            </div>
-            <button id="open-winget-btn" type="button" class="text-btn">Open App Installer</button>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">Scoop</div>
-              <div class="settings-desc" id="settings-scoop-desc">Checking…</div>
-            </div>
-            <button id="bootstrap-all-btn" type="button" class="text-btn primary">
-              Install missing
-            </button>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">Scoop note</div>
-              <div class="settings-desc">
-                Scoop is installed via winget/Chocolatey only. Scripted Scoop bootstraps are skipped
-                because Windows Defender often false-flags them as ClickFix.
-              </div>
-            </div>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">Update authority</div>
-              <div class="settings-desc">
-                When the same app appears in winget and Chocolatey (or Scoop), prefer one provider for Updates.
-                Default is winget — it usually tracks the installed desktop app version more accurately.
-              </div>
-            </div>
-            <select id="update-authority" class="settings-select" aria-label="Update authority">
-              <option value="winget">Prefer winget</option>
-              <option value="chocolatey">Prefer Chocolatey</option>
-              <option value="scoop">Prefer Scoop</option>
-            </select>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">Show update duplicates</div>
-              <div class="settings-desc">
-                List every provider’s outdated entry instead of collapsing matches (and Chocolatey
-                package families like git / git.install).
-              </div>
-            </div>
-            <label class="check-label">
-              <input id="show-update-duplicates" type="checkbox" />
-              Show all
-            </label>
-          </div>
-          <div class="settings-row">
-            <div>
-              <div class="settings-title">About</div>
-              <div class="settings-desc">
-                Bulk install many programs at once (Ninite-style), update, and uninstall via Chocolatey,
-                winget, and Scoop. Classic Programs view uninstalls Win32/MSI apps from the registry.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer class="bottom">
-        <div class="selection-info">
-          <strong id="selected-count">0</strong> selected
-          <span class="sep">·</span>
-          <span id="selected-detail">—</span>
-        </div>
-        <div class="footer-actions" id="footer-actions">
-          <button id="install-btn" type="button" class="text-btn primary" disabled>Install selected</button>
-          <button id="upgrade-btn" type="button" class="text-btn primary" disabled>Update selected</button>
-          <button id="upgrade-all-btn" type="button" class="text-btn" disabled>Update all</button>
-          <button id="uninstall-btn" type="button" class="text-btn danger" disabled>Uninstall selected</button>
-          <button id="pin-btn" type="button" class="text-btn" disabled>Pin</button>
-          <button id="unpin-btn" type="button" class="text-btn" disabled>Unpin</button>
-          <button id="uninstall-programs-btn" type="button" class="text-btn danger hidden" disabled>
-            Uninstall selected
-          </button>
-        </div>
-      </footer>
-
-      <aside id="log-panel" class="log-panel" aria-live="polite">
-        <div class="log-header">
-          <span>Activity log</span>
-          <button id="clear-log-btn" type="button" class="text-btn tiny">Clear log</button>
-        </div>
-        <pre id="log"></pre>
-      </aside>
+    <div class="toolbar">
+      <div class="view-switch" role="tablist" aria-label="Views">
+        <button type="button" class="text-btn view-btn active" data-view="installed">Installed</button>
+        <button type="button" class="text-btn view-btn" data-view="browse">Browse</button>
+        <button type="button" class="text-btn view-btn" data-view="updates">Updates</button>
+        <button type="button" class="text-btn view-btn" data-view="programs">Programs</button>
+        <button type="button" class="text-btn view-btn" data-view="sources">Sources</button>
+        <button type="button" class="text-btn view-btn" data-view="settings">Settings</button>
+      </div>
+      <input id="search" type="search" placeholder="Search…" autocomplete="off" spellcheck="false" />
+      <label class="check-label provider-filter" data-for="packages">
+        <input id="filter-choco" type="checkbox" checked />
+        Chocolatey
+      </label>
+      <label class="check-label provider-filter" data-for="packages">
+        <input id="filter-winget" type="checkbox" checked />
+        winget
+      </label>
+      <label class="check-label provider-filter" data-for="packages">
+        <input id="filter-scoop" type="checkbox" checked />
+        Scoop
+      </label>
+      <label class="check-label programs-only hidden">
+        <input id="show-system" type="checkbox" />
+        Show system components
+      </label>
+      <button id="refresh-btn" type="button" class="text-btn">Refresh</button>
+      <button id="select-visible-btn" type="button" class="text-btn">Select visible</button>
+      <button id="clear-btn" type="button" class="text-btn">Clear</button>
     </div>
 
-    <dialog id="confirm-dialog">
-      <form method="dialog" class="confirm-form">
-        <h2 id="confirm-title">Confirm</h2>
-        <p id="confirm-message">Continue?</p>
-        <ul id="confirm-list"></ul>
-        <div class="confirm-actions">
-          <button value="cancel" class="text-btn">Cancel</button>
-          <button id="confirm-ok" value="ok" class="text-btn danger">Confirm</button>
+    <section class="table-section">
+      <div class="table-wrap" id="packages-panel">
+        <table class="program-table">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input id="select-all" type="checkbox" title="Select all visible" />
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="name" aria-pressed="true">
+                  Name <span class="sort-ind" aria-hidden="true">▲</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="category">
+                  Category <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="provider">
+                  Provider <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="version">
+                  Version <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="available">
+                  Available <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="source">
+                  Source <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="status">
+                  Status <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="package-rows"></tbody>
+        </table>
+        <div id="empty-state" class="empty hidden">No packages match.</div>
+        <div id="loading-state" class="empty hidden">Loading…</div>
+      </div>
+
+      <div class="table-wrap hidden" id="programs-panel">
+        <table class="program-table">
+          <thead>
+            <tr>
+              <th class="col-check">
+                <input id="select-all-programs" type="checkbox" title="Select all visible" />
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="name" data-scope="programs" aria-pressed="true">
+                  Name <span class="sort-ind" aria-hidden="true">▲</span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="publisher" data-scope="programs">
+                  Publisher <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="version" data-scope="programs">
+                  Version <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="size" data-scope="programs">
+                  Size <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="sort-btn" data-sort="status" data-scope="programs">
+                  Status <span class="sort-ind" aria-hidden="true"></span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="program-rows"></tbody>
+        </table>
+        <div id="programs-empty" class="empty hidden">No programs match your search.</div>
+        <div id="programs-loading" class="empty hidden">Loading installed programs…</div>
+      </div>
+
+      <div class="table-wrap hidden" id="sources-panel">
+        <table class="program-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>URL</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="source-rows"></tbody>
+        </table>
+        <div id="sources-empty" class="empty hidden">No Chocolatey sources (is Chocolatey installed?).</div>
+        <div class="sources-add">
+          <input id="source-name" type="text" placeholder="Source name" autocomplete="off" />
+          <input id="source-url" type="text" placeholder="Source URL" autocomplete="off" />
+          <button id="add-source-btn" type="button" class="text-btn primary">Add source</button>
         </div>
-      </form>
-    </dialog>
-  </body>
+      </div>
+
+      <div class="settings-panel hidden" id="settings-panel">
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">Chocolatey</div>
+            <div class="settings-desc" id="settings-choco-desc">Checking…</div>
+          </div>
+          <button id="bootstrap-choco-btn" type="button" class="text-btn primary" disabled>
+            Install Chocolatey
+          </button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">winget</div>
+            <div class="settings-desc" id="settings-winget-desc">Checking…</div>
+          </div>
+          <button id="open-winget-btn" type="button" class="text-btn">Open App Installer</button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">Scoop</div>
+            <div class="settings-desc" id="settings-scoop-desc">Checking…</div>
+          </div>
+          <button id="bootstrap-all-btn" type="button" class="text-btn primary">
+            Install missing
+          </button>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">Scoop note</div>
+            <div class="settings-desc">
+              Scoop is installed via winget/Chocolatey only. Scripted Scoop bootstraps are skipped
+              because Windows Defender often false-flags them as ClickFix.
+            </div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">Update authority</div>
+            <div class="settings-desc">
+              When the same app appears in winget and Chocolatey (or Scoop), prefer one provider for Updates.
+              Default is winget — it usually tracks the installed desktop app version more accurately.
+            </div>
+          </div>
+          <select id="update-authority" class="settings-select" aria-label="Update authority">
+            <option value="winget">Prefer winget</option>
+            <option value="chocolatey">Prefer Chocolatey</option>
+            <option value="scoop">Prefer Scoop</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">Show update duplicates</div>
+            <div class="settings-desc">
+              List every provider’s outdated entry instead of collapsing matches (and Chocolatey
+              package families like git / git.install).
+            </div>
+          </div>
+          <label class="check-label">
+            <input id="show-update-duplicates" type="checkbox" />
+            Show all
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-title">About</div>
+            <div class="settings-desc">
+              Bulk install many programs at once (Ninite-style), update, and uninstall via Chocolatey,
+              winget, and Scoop. Classic Programs view uninstalls Win32/MSI apps from the registry.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="bottom">
+      <div class="selection-info">
+        <strong id="selected-count">0</strong> selected
+        <span class="sep">·</span>
+        <span id="selected-detail">—</span>
+      </div>
+      <div class="footer-actions" id="footer-actions">
+        <button id="install-btn" type="button" class="text-btn primary" disabled>Install selected</button>
+        <button id="upgrade-btn" type="button" class="text-btn primary" disabled>Update selected</button>
+        <button id="upgrade-all-btn" type="button" class="text-btn" disabled>Update all</button>
+        <button id="uninstall-btn" type="button" class="text-btn danger" disabled>Uninstall selected</button>
+        <button id="pin-btn" type="button" class="text-btn" disabled>Pin</button>
+        <button id="unpin-btn" type="button" class="text-btn" disabled>Unpin</button>
+        <button id="uninstall-programs-btn" type="button" class="text-btn danger hidden" disabled>
+          Uninstall selected
+        </button>
+      </div>
+    </footer>
+
+    <aside id="log-panel" class="log-panel" aria-live="polite">
+      <div class="log-header">
+        <span>Activity log</span>
+        <button id="clear-log-btn" type="button" class="text-btn tiny">Clear log</button>
+      </div>
+      <pre id="log"></pre>
+    </aside>
+  </div>
+
+  <dialog id="confirm-dialog">
+    <form method="dialog" class="confirm-form">
+      <h2 id="confirm-title">Confirm</h2>
+      <p id="confirm-message">Continue?</p>
+      <ul id="confirm-list"></ul>
+      <div class="confirm-actions">
+        <button value="cancel" class="text-btn">Cancel</button>
+        <button id="confirm-ok" value="ok" class="text-btn danger">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+
 </html>

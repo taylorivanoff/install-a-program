@@ -43,48 +43,65 @@ async fn ensure_providers(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn list_installed(
+async fn list_installed(
     include_chocolatey: bool,
     include_winget: bool,
     include_scoop: bool,
 ) -> Result<Vec<providers::Package>, String> {
-    providers::list_installed(include_chocolatey, include_winget, include_scoop)
+    tauri::async_runtime::spawn_blocking(move || {
+        providers::list_installed(include_chocolatey, include_winget, include_scoop)
+    })
+    .await
+    .map_err(|e| format!("List installed task failed: {e}"))?
 }
 
 #[tauri::command]
-fn search_packages(
+async fn search_packages(
     query: String,
     include_chocolatey: bool,
     include_winget: bool,
     include_scoop: bool,
 ) -> Result<Vec<providers::Package>, String> {
-    providers::search(&query, include_chocolatey, include_winget, include_scoop)
+    tauri::async_runtime::spawn_blocking(move || {
+        providers::search(&query, include_chocolatey, include_winget, include_scoop)
+    })
+    .await
+    .map_err(|e| format!("Search packages task failed: {e}"))?
 }
 
 #[tauri::command]
-fn list_popular_packages(
+async fn list_popular_packages(
     include_chocolatey: bool,
     include_winget: bool,
     include_scoop: bool,
-) -> Vec<providers::Package> {
-    providers::list_popular(include_chocolatey, include_winget, include_scoop)
+) -> Result<Vec<providers::Package>, String> {
+    Ok(tauri::async_runtime::spawn_blocking(move || {
+        providers::list_popular(include_chocolatey, include_winget, include_scoop)
+    })
+    .await
+    .map_err(|e| format!("List popular packages task failed: {e}"))?)
 }
 
 #[tauri::command]
-fn list_outdated(
+async fn list_outdated(
     include_chocolatey: bool,
     include_winget: bool,
     include_scoop: bool,
     prefer_provider: Option<String>,
     show_duplicates: Option<bool>,
 ) -> Result<Vec<providers::Package>, String> {
-    providers::list_outdated(
-        include_chocolatey,
-        include_winget,
-        include_scoop,
-        prefer_provider,
-        show_duplicates.unwrap_or(false),
-    )
+    let show_duplicates = show_duplicates.unwrap_or(false);
+    tauri::async_runtime::spawn_blocking(move || {
+        providers::list_outdated(
+            include_chocolatey,
+            include_winget,
+            include_scoop,
+            prefer_provider,
+            show_duplicates,
+        )
+    })
+    .await
+    .map_err(|e| format!("List outdated task failed: {e}"))?
 }
 
 #[derive(Deserialize)]
@@ -141,8 +158,10 @@ async fn run_package_action(app: AppHandle, request: ActionRequest) -> Result<()
 }
 
 #[tauri::command]
-fn list_programs(show_system: bool) -> Result<Vec<programs::InstalledProgram>, String> {
-    programs::list_installed_programs(show_system)
+async fn list_programs(show_system: bool) -> Result<Vec<programs::InstalledProgram>, String> {
+    tauri::async_runtime::spawn_blocking(move || programs::list_installed_programs(show_system))
+        .await
+        .map_err(|e| format!("List programs task failed: {e}"))?
 }
 
 #[tauri::command]
@@ -153,8 +172,10 @@ async fn uninstall_programs(app: AppHandle, ids: Vec<String>) -> Result<(), Stri
 }
 
 #[tauri::command]
-fn list_choco_sources() -> Result<Vec<providers::ChocoSource>, String> {
-    providers::chocolatey::list_sources()
+async fn list_choco_sources() -> Result<Vec<providers::ChocoSource>, String> {
+    tauri::async_runtime::spawn_blocking(providers::chocolatey::list_sources)
+        .await
+        .map_err(|e| format!("List sources task failed: {e}"))?
 }
 
 #[tauri::command]

@@ -41,6 +41,8 @@ const selectedPrograms = new Set();
 /** @type {Map<string, {status: string, message?: string}>} */
 const statusById = new Map();
 let busy = false;
+/** Bumped when the user switches view or starts a new load so stale results are ignored. */
+let loadSeq = 0;
 /** @type {string} */
 let sortKey = "name";
 /** @type {"asc" | "desc"} */
@@ -124,6 +126,14 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replaceAll("`", "&#96;");
+}
+
+function isStaleLoad(seq, forView) {
+  return seq !== loadSeq || view !== forView;
+}
+
+function cancelPendingLoads() {
+  loadSeq += 1;
 }
 
 function providerFilters() {
@@ -545,26 +555,29 @@ async function loadCurrentView() {
     return;
   }
   if (view === "sources") {
-    await loadSources();
+    void loadSources();
     return;
   }
   if (view === "programs") {
-    await loadPrograms();
+    void loadPrograms();
     return;
   }
-  await loadPackages();
+  void loadPackages();
 }
 
 async function loadPackages() {
+  const seq = ++loadSeq;
+  const forView = view;
   els.loadingState.classList.remove("hidden");
   els.emptyState.classList.add("hidden");
   const filters = providerFilters();
   try {
-    if (view === "browse") {
+    if (forView === "browse") {
       const q = els.search.value.trim();
       browseQuery = q;
       if (!q) {
         packages = await invoke("list_popular_packages", filters);
+        if (isStaleLoad(seq, forView)) return;
         render();
         logLine(
           `Showing ${packages.length} popular package(s). Type to search the catalogs.`
@@ -572,8 +585,9 @@ async function loadPackages() {
         return;
       }
       packages = await invoke("search_packages", { query: q, ...filters });
+      if (isStaleLoad(seq, forView)) return;
       logLine(`Found ${packages.length} package(s) for “${q}”.`);
-    } else if (view === "updates") {
+    } else if (forView === "updates") {
       const authority = els.updateAuthority?.value || "winget";
       const showDuplicates = !!els.showUpdateDuplicates?.checked;
       packages = await invoke("list_outdated", {
@@ -581,6 +595,7 @@ async function loadPackages() {
         preferProvider: authority,
         showDuplicates,
       });
+      if (isStaleLoad(seq, forView)) return;
       logLine(
         showDuplicates
           ? `Found ${packages.length} outdated package(s) (duplicates shown).`
@@ -588,6 +603,7 @@ async function loadPackages() {
       );
     } else {
       packages = await invoke("list_installed", filters);
+      if (isStaleLoad(seq, forView)) return;
       logLine(`Loaded ${packages.length} installed package(s).`);
     }
     for (const id of [...selected]) {
@@ -595,6 +611,7 @@ async function loadPackages() {
     }
     render();
   } catch (err) {
+    if (isStaleLoad(seq, forView)) return;
     els.loadingState.classList.add("hidden");
     logLine(`Failed to load packages: ${err}`);
     packages = [];
@@ -603,29 +620,37 @@ async function loadPackages() {
 }
 
 async function loadPrograms() {
+  const seq = ++loadSeq;
+  const forView = view;
   els.programsLoading.classList.remove("hidden");
   els.programsEmpty.classList.add("hidden");
   try {
     programs = await invoke("list_programs", {
       showSystem: els.showSystem.checked,
     });
+    if (isStaleLoad(seq, forView)) return;
     for (const id of [...selectedPrograms]) {
       if (!programs.some((p) => p.id === id)) selectedPrograms.delete(id);
     }
     render();
     logLine(`Loaded ${programs.length} programs.`);
   } catch (err) {
+    if (isStaleLoad(seq, forView)) return;
     els.programsLoading.classList.add("hidden");
     logLine(`Failed to list programs: ${err}`);
   }
 }
 
 async function loadSources() {
+  const seq = ++loadSeq;
+  const forView = view;
   try {
     sources = await invoke("list_choco_sources");
+    if (isStaleLoad(seq, forView)) return;
     render();
     logLine(`Loaded ${sources.length} Chocolatey source(s).`);
   } catch (err) {
+    if (isStaleLoad(seq, forView)) return;
     sources = [];
     render();
     logLine(`Failed to list sources: ${err}`);
@@ -719,14 +744,15 @@ async function startProgramUninstall() {
   }
 }
 
-async function setView(next) {
+function setView(next) {
   if (view === next) return;
+  cancelPendingLoads();
   view = next;
   selected.clear();
   sortKey = "name";
   sortDir = "asc";
   render();
-  await loadCurrentView();
+  void loadCurrentView();
 }
 
 els.packageRows.addEventListener("change", (e) => {
@@ -792,19 +818,34 @@ let searchTimer = null;
 els.search.addEventListener("input", () => {
   if (view === "browse") {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => loadPackages(), 350);
+    searchTimer = setTimeout(() => {
+      cancelPendingLoads();
+      void loadPackages();
+    }, 350);
   } else {
     render();
   }
 });
 
-els.filterChoco.addEventListener("change", () => loadCurrentView());
-els.filterWinget.addEventListener("change", () => loadCurrentView());
-els.filterScoop.addEventListener("change", () => loadCurrentView());
-els.showSystem.addEventListener("change", () => loadPrograms());
-els.refreshBtn.addEventListener("click", async () => {
-  await refreshProviderStatus();
-  await loadCurrentView();
+els.filterChoco.addEventListener("change", () => {
+  cancelPendingLoads();
+  void loadCurrentView();
+});
+els.filterWinget.addEventListener("change", () => {
+  cancelPendingLoads();
+  void loadCurrentView();
+});
+els.filterScoop.addEventListener("change", () => {
+  cancelPendingLoads();
+  void loadCurrentView();
+});
+els.showSystem.addEventListener("change", () => {
+  cancelPendingLoads();
+  void loadPrograms();
+});
+els.refreshBtn.addEventListener("click", () => {
+  cancelPendingLoads();
+  void refreshProviderStatus().then(() => loadCurrentView());
 });
 els.clearBtn.addEventListener("click", () => {
   if (view === "programs") selectedPrograms.clear();
@@ -930,11 +971,17 @@ els.openWingetBtn.addEventListener("click", async () => {
 
 els.updateAuthority?.addEventListener("change", async () => {
   await saveUpdatePrefs();
-  if (view === "updates") await loadPackages();
+  if (view === "updates") {
+    cancelPendingLoads();
+    void loadPackages();
+  }
 });
 els.showUpdateDuplicates?.addEventListener("change", async () => {
   await saveUpdatePrefs();
-  if (view === "updates") await loadPackages();
+  if (view === "updates") {
+    cancelPendingLoads();
+    void loadPackages();
+  }
 });
 
 els.clearLogBtn.addEventListener("click", () => {
@@ -1006,7 +1053,8 @@ await listen("uninstall-finished", () => {
 
 await listen("tray:action", (event) => {
   if (event.payload === "refresh") {
-    loadCurrentView();
+    cancelPendingLoads();
+    void loadCurrentView();
   }
 });
 
