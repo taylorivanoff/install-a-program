@@ -1,4 +1,4 @@
-# Install a Program
+# Install Many Programs
 
 Pick apps from a Ninite-style grid and install them in one run on Windows, or search packages and install packages from winget, Chocolatey or Scoop, then keep your PC update-to-date across all apps from the Updates tab.
 
