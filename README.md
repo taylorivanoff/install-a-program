@@ -1,10 +1,12 @@
 # Install a Program
 
-Pick apps from a Ninite-style Browse grid and install them in one run on Windows. The app opens on **Browse** with category cards, one-click presets, and silent winget installs — then keeps your PC updated from the **Updates** tab (winget, Chocolatey, and Scoop).
+Pick apps from a Ninite-style Browse grid and install them in one run on Windows or search packages from winget, Chocolatey or Scoop, then keep your PC updated from the **Updates** tab.
 
-Advanced mode unlocks Chocolatey, Scoop, classic Programs uninstall, and Chocolatey source management.
+<img width="1102" height="792" alt="{23CDA1FF-E880-44D5-BEE4-D85B3D361237}" src="https://github.com/user-attachments/assets/53b0ee9b-1d63-4aa0-bff1-4d49a6fbdf77" />
 
-<!-- Screenshot: capture the Browse grid at 1100×760 and save as docs/images/browse-grid.png -->
+<img width="1102" height="792" alt="{7964AE6D-992A-400A-91FC-6D36CBF5E471}" src="https://github.com/user-attachments/assets/2ec0abfd-19f5-49d0-adf7-2cfa2ae707ea" />
+
+<img width="1102" height="792" alt="{EFD7F402-4A37-4A55-8B35-25135E5C2E42}" src="https://github.com/user-attachments/assets/4b48aff4-4c7d-4de9-bffe-ca142803469c" />
 
 ## Features
 
