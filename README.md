@@ -1,4 +1,4 @@
-# Install a Program (Bulk Edition)
+# Install a Program
 
 Pick apps from a Ninite-style Browse grid and install them in one run on Windows. The app opens on **Browse** with category cards, one-click presets, and silent winget installs — then keeps your PC updated from the **Updates** tab (winget, Chocolatey, and Scoop).
 
