@@ -1,6 +1,6 @@
 [package]
 name = "install-a-program"
-version = "0.1.4"
+version = "0.1.5"
 description = "Install a Program (Bulk Edition) — install multiple programs at once on Windows"
 authors = ["Taylor Ivanoff"]
 edition = "2021"
