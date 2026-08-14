@@ -284,7 +284,7 @@ pub fn run() {
             install_state(
                 app.handle(),
                 TrayBaseOptions {
-                    app_name: "Install a Program (Bulk Edition)".into(),
+                    app_name: "Install Many Programs".into(),
                     settings_file_name: "install-a-program-settings.json".into(),
                     defaults,
                     show_always_on_top: false,
@@ -309,5 +309,5 @@ pub fn run() {
 
     builder
         .run(tauri::generate_context!())
-        .expect("error while running Install a Program (Bulk Edition)");
+        .expect("error while running Install Many Programs");
 }

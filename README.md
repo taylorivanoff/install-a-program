@@ -1,4 +1,4 @@
-# Install a Program
+# Install Many Programs
 
 Pick apps from a Ninite-style grid and install them in one run on Windows, or search packages and install packages from winget, Chocolatey or Scoop, then keep your PC update-to-date across all apps from the Updates tab.
 
@@ -58,11 +58,11 @@ Portable app (no installer):
 npm run build:portable
 ```
 
-Output: `src-tauri/target/release/Install a Program (Bulk Edition).exe`
+Output: `src-tauri/target/release/Install Many Programs.exe`
 
 NSIS installer output:
 
-`src-tauri/target/release/bundle/nsis/Install a Program (Bulk Edition)_0.1.2_x64-setup.exe`
+`src-tauri/target/release/bundle/nsis/Install Many Programs_0.1.2_x64-setup.exe`
 
 ### Standalone bundle runner
 

@@ -2,7 +2,7 @@
   "name": "install-a-program",
   "private": true,
   "version": "0.1.5",
-  "description": "Install a Program (Bulk Edition) — install multiple programs at once on Windows (Ninite-style bulk install) with Chocolatey, winget, updates, and classic uninstall",
+  "description": "Install Many Programs — install multiple programs at once on Windows (Ninite-style bulk install) with Chocolatey, winget, updates, and classic uninstall",
   "keywords": [
     "install-a-program",
     "install-multiple-programs",

@@ -28,9 +28,9 @@ fn run() -> Result<(), String> {
     let bundle = extract_bundle_from_bytes(&bytes)?;
 
     if let Some(name) = &bundle.name {
-        println!("Install a Program — {name}");
+        println!("Install Many Programs — {name}");
     } else {
-        println!("Install a Program — standalone installer");
+        println!("Install Many Programs — standalone installer");
     }
     println!("Installing {} package(s) via winget…", bundle.ids.len());
 

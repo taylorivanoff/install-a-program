@@ -3,7 +3,9 @@ use winreg::enums::*;
 use winreg::RegKey;
 
 const APP_DISPLAY_NAMES: &[&str] = &[
+    "Install Many Programs",
     "Install a Program (Bulk Edition)",
+    "Uninstall Many Programs",
     "Uninstall a Program (Bulk Edition)",
     "Uninstall Manager",
     "Ultimate Uninstaller",

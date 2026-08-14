@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Install a Program (Bulk Edition)",
+  "productName": "Install Many Programs",
   "version": "0.1.5",
   "identifier": "io.github.taylorivanoff.install-a-program",
   "build": {
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Install a Program (Bulk Edition)",
+        "title": "Install Many Programs",
         "width": 1100,
         "height": 760,
         "minWidth": 800,
@@ -31,7 +31,7 @@
     ],
     "publisher": "Taylor Ivanoff",
     "shortDescription": "Install multiple programs at once (Ninite-style bulk install)",
-    "longDescription": "Install a Program (Bulk Edition) is a Ninite-style bulk software installer and Chocolatey GUI / winget GUI alternative for Windows. Search and install many packages at once via Chocolatey and winget, bulk-update outdated apps, manage sources, bootstrap Chocolatey when missing, and uninstall classic Win32/MSI programs from the registry.",
+    "longDescription": "Install Many Programs is a Ninite-style bulk software installer and Chocolatey GUI / winget GUI alternative for Windows. Search and install many packages at once via Chocolatey and winget, bulk-update outdated apps, manage sources, bootstrap Chocolatey when missing, and uninstall classic Win32/MSI programs from the registry.",
     "category": "Utility",
     "copyright": "Copyright © Taylor Ivanoff",
     "icon": [

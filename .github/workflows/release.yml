@@ -101,7 +101,7 @@ jobs:
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
-      - name: Checkout Install a Program
+      - name: Checkout Install Many Programs
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.check-version.outputs.ref }}
@@ -264,9 +264,9 @@ jobs:
             install-a-program/src-tauri/target/release/bundle/nsis/latest.json
             install-a-program/Install-a-Program-Portable_*_x64.zip
           body: |
-            ## Install a Program (Bulk Edition) v${{ needs.check-version.outputs.version }}
+            ## Install Many Programs v${{ needs.check-version.outputs.version }}
 
-            Windows NSIS setup (`Install a Program (Bulk Edition)_*_x64-setup.exe`).
+            Windows NSIS setup (`Install Many Programs_*_x64-setup.exe`).
 
             Ninite-style bulk install plus Chocolatey GUI / winget GUI features.
 
