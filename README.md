@@ -68,7 +68,7 @@ NSIS installer output:
 2. Click **Save standalone installer…**
 3. Run the exported `.exe` on another PC that has **winget** (App Installer)
 
-The runner installs only winget packages. Chocolatey/Scoop packages are not supported in standalone exports.
+The runner installs only winget packages. Chocolatey/Scoop packages are not supported in standalone exports. The runner template is embedded in the app at build time — use **Save standalone installer…** to produce a working `.exe`; the bare template is not published as a release download.
 
 ## SEO / discovery keywords
 

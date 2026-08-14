@@ -1,6 +1,8 @@
 use std::fs::{self, File};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(not(feature = "embedded-runner"))]
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -99,6 +101,12 @@ pub fn extract_bundle_from_path(path: &Path) -> Result<StandaloneBundle, String>
     extract_bundle_from_bytes(&data)
 }
 
+#[cfg(feature = "embedded-runner")]
+pub fn runner_template_bytes() -> Result<Vec<u8>, String> {
+    Ok(include_bytes!(concat!(env!("OUT_DIR"), "/runner-template.exe")).to_vec())
+}
+
+#[cfg(not(feature = "embedded-runner"))]
 pub fn runner_template_bytes() -> Result<Vec<u8>, String> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let candidates = [
@@ -134,4 +142,28 @@ pub fn export_standalone_installer(dest_path: &Path, bundle: &StandaloneBundle) 
     file.write_all(&bytes)
         .map_err(|e| format!("Failed to write {}: {e}", dest_path.display()))?;
     Ok(bundle.ids.len())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runner_template_is_embedded() {
+        let bytes = runner_template_bytes().expect("embedded runner template");
+        assert!(bytes.len() > 1000, "runner template should be a real PE");
+    }
+
+    #[test]
+    fn embed_and_extract_roundtrip() {
+        let template = runner_template_bytes().unwrap();
+        let bundle = StandaloneBundle::new(
+            Some("test".into()),
+            vec!["winget:Google.Chrome".into()],
+        );
+        let embedded = embed_bundle(&template, &bundle).unwrap();
+        let extracted = extract_bundle_from_bytes(&embedded).unwrap();
+        assert_eq!(extracted.name, bundle.name);
+        assert_eq!(extracted.ids, bundle.ids);
+    }
 }

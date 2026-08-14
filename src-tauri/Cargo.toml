@@ -6,6 +6,10 @@ authors = ["Taylor Ivanoff"]
 edition = "2021"
 default-run = "install-a-program"
 
+[features]
+default = ["embedded-runner"]
+embedded-runner = []
+
 [lib]
 name = "install_a_program_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

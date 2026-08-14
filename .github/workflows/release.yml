@@ -189,7 +189,6 @@ jobs:
             Select-Object -First 1
           $ZipName = "Install-a-Program-Portable_${Version}_x64.zip"
           Compress-Archive -Path $PortableExe.FullName -DestinationPath $ZipName -Force
-          Copy-Item src-tauri/target/release/install-a-program-runner.exe "install-a-program-runner_${Version}_x64.exe"
 
       - name: Generate latest.json
         working-directory: install-a-program
@@ -237,7 +236,6 @@ jobs:
             install-a-program/src-tauri/target/release/bundle/nsis/*.sig
             install-a-program/src-tauri/target/release/bundle/nsis/latest.json
             install-a-program/Install-a-Program-Portable_*_x64.zip
-            install-a-program/install-a-program-runner_*_x64.exe
           body: |
             ## Install a Program (Bulk Edition) v${{ needs.check-version.outputs.version }}
 
