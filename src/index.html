@@ -10,20 +10,36 @@
     content="install a program, install multiple programs, ninite alternative, bulk install software, chocolatey gui, winget gui, windows package manager, scoop gui, silent install, bulk update" />
   <meta name="color-scheme" content="light dark" />
   <title>Install a Program (Bulk Edition)</title>
+  <link rel="stylesheet" href="./vendor/shared-styles/index.css" />
   <link rel="stylesheet" href="./styles.css" />
+  <script src="./vendor/tauri-tray-bridge.js"></script>
   <script type="module" src="./main.js" defer></script>
 </head>
 
 <body>
-  <div class="app">
-    <header class="top">
-      <div class="meta">
-        <button id="status-summary" type="button" class="auth-badge pending hidden">Checking…</button>
-        <button id="elevation-badge" type="button" class="auth-badge pending">Checking elevation…</button>
-        <span id="choco-badge" class="auth-badge pending">Chocolatey…</span>
-        <span id="winget-badge" class="auth-badge pending">winget…</span>
-        <span id="scoop-badge" class="auth-badge pending">Scoop…</span>
-        <span id="count-label" class="count">0 items</span>
+  <div class="app window-shell">
+    <header class="titlebar">
+      <div class="titlebar-drag">
+        <h1 class="app-title">Install a Program</h1>
+        <div class="meta">
+          <button id="status-summary" type="button" class="auth-badge pending hidden">Checking…</button>
+          <button id="elevation-badge" type="button" class="auth-badge pending">Checking elevation…</button>
+          <span id="choco-badge" class="auth-badge pending">Chocolatey…</span>
+          <span id="winget-badge" class="auth-badge pending">winget…</span>
+          <span id="scoop-badge" class="auth-badge pending">Scoop…</span>
+          <span id="count-label" class="count">0 items</span>
+        </div>
+      </div>
+      <div class="window-controls" aria-label="Window">
+        <button type="button" class="window-btn" data-window-action="minimize" title="Minimize" aria-label="Minimize">
+          <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path fill="currentColor" d="M1 5h8v1H1z"/></svg>
+        </button>
+        <button type="button" class="window-btn" data-window-action="maximize" title="Maximize" aria-label="Maximize">
+          <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path fill="currentColor" d="M1.5 1.5h7v7h-7zm1 1v5h5v-5z"/></svg>
+        </button>
+        <button type="button" class="window-btn window-btn--close" data-window-action="close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path fill="currentColor" d="M1.2 2.1 2.1 1.2 5 4.1 7.9 1.2 8.8 2.1 5.9 5l2.9 2.9-.9.9L5 5.9 2.1 8.8l-.9-.9L4.1 5z"/></svg>
+        </button>
       </div>
     </header>
 
