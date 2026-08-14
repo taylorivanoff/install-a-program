@@ -1,6 +1,6 @@
 # Install a Program
 
-Pick apps from a Ninite-style Browse grid and install them in one run on Windows or search packages from winget, Chocolatey or Scoop, then keep your PC updated from the **Updates** tab.
+Pick apps from a Ninite-style grid and install them in one run on Windows, or search packages and install packages from winget, Chocolatey or Scoop, then keep your PC update-to-date across all apps from the Updates tab.
 
 <img width="1102" height="792" alt="{23CDA1FF-E880-44D5-BEE4-D85B3D361237}" src="https://github.com/user-attachments/assets/53b0ee9b-1d63-4aa0-bff1-4d49a6fbdf77" />
 
