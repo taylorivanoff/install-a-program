@@ -194,7 +194,9 @@ jobs:
       - name: Build standalone runner template
         working-directory: install-a-program
         run: |
-          cargo build --release --manifest-path src-tauri/Cargo.toml --bin install-a-program-runner
+          # --no-default-features skips embedded-runner so build.rs does not try
+          # to nest another cargo build of this package (that deadlocks on the target lock).
+          cargo build --release --manifest-path src-tauri/Cargo.toml --bin install-a-program-runner --no-default-features
           mkdir -p src-tauri/resources
           cp src-tauri/target/release/install-a-program-runner.exe src-tauri/resources/runner-template.exe
 

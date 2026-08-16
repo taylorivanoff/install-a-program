@@ -123,7 +123,7 @@ pub fn runner_template_bytes() -> Result<Vec<u8>, String> {
     }
 
     Err(
-        "Standalone runner template not found. Build install-a-program-runner first (cargo build --release --bin install-a-program-runner)."
+        "Standalone runner template not found. Build install-a-program-runner first (npm run build:runner)."
             .into(),
     )
 }
